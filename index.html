@@ -1,0 +1,40 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>i3s web client</title>
+    <script src="static/vendor/jquery-3.3.1.min.js"></script>
+    <script src="static/vendor/bootstrap-4.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="static/vendor/Cesium-1.50/Cesium.js"></script>
+    <style>
+        @import url(static/vendor/Cesium-1.50/Widgets/widgets.css);
+    </style>
+    <link rel="stylesheet" type="text/css" href="static/vendor/bootstrap-4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/index.css">
+</head>
+
+<body>
+    <div id="root-container" class="container-fluid">
+        <div class="row">
+            <div id="panel-container" class="col-4">
+                <div id="panel-title">i3s Web Client</div>
+                <div class="panel-section">
+                    <div class="section-title">Layer URL</div>
+                    <input type="text" id="i3s-url" class="form-control" value="https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Buildings_Hamburg/SceneServer/layers/0" />
+                    <button id="i3s-button" class="btn">Retrieve Metadata</button>
+                    <div class="clear-float"></div>
+                </div>
+                <div class="panel-section">
+                    <div class="section-title">Log</div>
+                    <textarea id="log" class="form-control" rows="5"></textarea>
+                </div>
+            </div>
+            <div id="cesium-container" class="col-8"></div>
+        </div>
+    </div>
+    <script src="static/js/index.js"></script>
+</body>
+
+</html>

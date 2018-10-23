@@ -1,0 +1,64 @@
+body {
+    margin: 0;
+    background: rgb(30, 30, 30);
+    color: white;
+    font-family: 微軟正黑體;
+}
+
+#root-container.container-fluid {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    padding: 0;
+}
+
+#root-container>.row {
+    margin-left: 0;
+}
+
+#panel-container, #cesium-container {
+    height: 100%;
+}
+
+#panel-container {
+    padding: 15px;
+}
+
+#panel-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.panel-section {
+    margin-bottom: 10px;
+}
+
+.section-title {
+    margin-bottom: 10px;
+}
+
+#i3s-url, #i3s-button {
+    border-radius: 2px;
+}
+
+#i3s-button {
+    float: right;
+    margin-top: 20px;
+}
+
+.clear-float {
+    clear: both;
+}
+
+#log {
+    overflow: hidden;
+}
+
+/** modify cesium styles */
+/*************************/
+
+.cesium-widget-credits, .cesium-viewer-toolbar {
+    display: none !important;
+}
+
+/*************************/
