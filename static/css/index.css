@@ -41,6 +41,12 @@ body {
     border-radius: 2px;
 }
 
+#i3s-url {
+    background: black;
+    color: white;
+    border: 1px solid rgb(70, 70, 70);
+}
+
 #i3s-button {
     float: right;
     margin-top: 20px;
@@ -51,7 +57,13 @@ body {
 }
 
 #log {
-    overflow: hidden;
+    width: 100%;
+    background: black;
+    height: 20rem;
+    border-radius: 2px;
+    border: rgb(50, 50, 50) solid 1px;
+    padding: 1rem;
+    overflow: auto;
 }
 
 /** modify cesium styles */
