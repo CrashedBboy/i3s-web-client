@@ -66,6 +66,18 @@ body {
     overflow: auto;
 }
 
+#camera-info-container {
+    position: absolute;
+    bottom: 0%;
+    z-index: 100;
+}
+
+#get-node {
+    display: none;
+    border-radius: 2px;
+    float: right;
+}
+
 /** modify cesium styles */
 /*************************/
 

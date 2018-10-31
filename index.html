@@ -30,8 +30,23 @@
                     <div class="section-title">Log</div>
                     <div id="log"></div>
                 </div>
+                <div>
+                    <button id="get-node" class="btn btn-info">Manually Get Node</button>
+                </div>
             </div>
-            <div id="cesium-container" class="col-8"></div>
+            <div id="cesium-container" class="col-8">
+                <div id="camera-info-container">
+                    <span>[W,S,E,N] =></span>
+                    <span id='camera-bounding-text'>[]</span>
+                    <span>, viewed area width =></span>
+                    <span id="area-width-text">- m</span>
+                    <span>, camera height => </span>
+                    <span id="camera-height-text">- m</span>
+                    <br/>
+                    <span>screen[width, height] =></span>
+                    <span id="screen-size-text">[]</span>
+                </div>
+            </div>
         </div>
     </div>
     <script src="static/js/helper.js"></script>
