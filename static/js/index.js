@@ -2,6 +2,7 @@ let viewer;
 let layerUrl;
 let cameraChangedRegisterd = false;
 let showingEntities = new Array();
+let camerInfoShowed = false;
 
 let DEBUG = true;
 
@@ -72,11 +73,13 @@ function retrieveI3SLayer() {
                     log('moved camera to layer "' + layer.name + '"');
 
                     // register camera change event
-                    if (cameraChangedRegisterd == false && !DEBUG) {
+                    if (cameraChangedRegisterd == false) {
                         cameraChangedRegisterd = true;
 
                         viewer.camera.changed.addEventListener(function (data) {
-                            retrieveNodesByFrustum();
+                            if (!DEBUG) {
+                                retrieveNodesByFrustum();
+                            }
                         });
                     }
                     
@@ -91,6 +94,11 @@ function retrieveI3SLayer() {
 function retrieveNodesByFrustum() {
 
     removeAllEntities();
+
+    if (!camerInfoShowed) {
+        camerInfoShowed = true;
+        $('#camera-info-container').show();
+    }
 
     // get camera bounding
     let cameraRectangle = viewer.camera.computeViewRectangle();

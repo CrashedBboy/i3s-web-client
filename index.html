@@ -36,15 +36,22 @@
             </div>
             <div id="cesium-container" class="col-8">
                 <div id="camera-info-container">
-                    <span>[W,S,E,N] =></span>
-                    <span id='camera-bounding-text'>[]</span>
-                    <span>, viewed area width =></span>
-                    <span id="area-width-text">- m</span>
-                    <span>, camera height => </span>
-                    <span id="camera-height-text">- m</span>
-                    <br/>
-                    <span>screen[width, height] =></span>
-                    <span id="screen-size-text">[]</span>
+                    <div class="row">
+                        <div class="col-6">[W,S,E,N]</div>
+                        <div id='camera-bounding-text' class="col-6">[-, -, -, -]</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">viewed area width</div>
+                        <div id="area-width-text" class="col-6">- m</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">camera height</div>
+                        <div id="camera-height-text" class="col-6">- m</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">screen [width, height]</div>
+                        <div id="screen-size-text" class="col-6">[]</div>
+                    </div>
                 </div>
             </div>
         </div>
