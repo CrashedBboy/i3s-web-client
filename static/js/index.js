@@ -3,8 +3,9 @@ let layerUrl;
 let cameraChangedRegisterd = false;
 let showingEntities = new Array();
 let camerInfoShowed = false;
+let displayTimestamp;
 
-let DEBUG = true;
+let DEBUG = false;
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -93,6 +94,10 @@ function retrieveI3SLayer() {
 
 function retrieveNodesByFrustum() {
 
+    displayTimestamp = new Date().valueOf();
+
+    let localTimestamp = displayTimestamp;
+
     removeAllEntities();
 
     if (!camerInfoShowed) {
@@ -129,6 +134,11 @@ function retrieveNodesByFrustum() {
             dataType: "json"
         })
             .done(function (node) {
+                console.log('globalTimestamp: ' + displayTimestamp + ', localTimestamp: ' + localTimestamp);
+                if (localTimestamp != displayTimestamp) {
+                    console.log('data has been expired, aborted');
+                    return;
+                }
 
                 if (node.error) {
                     console.log('wrong node url, break');
