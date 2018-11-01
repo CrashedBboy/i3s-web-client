@@ -1,6 +1,6 @@
 function log(text, rolldown = true) {
     $('#log').append('[' + new Date().toLocaleTimeString() + '] ' + text + '<br/>');
-    
+
     if (rolldown) {
         $('#log').scrollTop($('#log').prop('scrollHeight'));
     }
@@ -21,4 +21,27 @@ function getDistanceFromLatLon(lat1, lon1, lat2, lon2) {
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     var d = R * c; // Distance in 
     return d;
+}
+
+function getLevelColor(node) {
+    if (node && node.level) {
+        switch (node.level) {
+            case 1:
+                return Cesium.Color.fromCssColorString('grey').withAlpha(0.3);
+            case 2:
+                return Cesium.Color.fromCssColorString('lightskyblue').withAlpha(0.3);
+            case 3:
+                return Cesium.Color.fromCssColorString('yellow').withAlpha(0.3);
+            case 4:
+                return Cesium.Color.fromCssColorString('orange').withAlpha(0.3);
+            case 5:
+                return Cesium.Color.fromCssColorString('red').withAlpha(0.3);
+            case 6:
+                return Cesium.Color.fromCssColorString('green').withAlpha(0.3);
+            default:
+                return Cesium.Color.fromCssColorString('grey').withAlpha(0.3);
+        }
+    } else {
+        return Cesium.Color.fromRandom({alpha : 0.3});
+    }
 }

@@ -207,7 +207,7 @@ function processNode(node) {
         position: Cesium.Cartesian3.fromDegrees(node.mbs[0], node.mbs[1], node.mbs[2]),
         ellipsoid : {
             radii : new Cesium.Cartesian3(node.mbs[3], node.mbs[3], node.mbs[3]),
-            material : Cesium.Color.fromRandom({alpha : 0.3})
+            material : getLevelColor(node)
         }
     });
 

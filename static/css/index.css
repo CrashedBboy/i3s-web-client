@@ -85,6 +85,25 @@ body {
     float: right;
 }
 
+#legend-container {
+    position: absolute;
+    z-index: 100;
+    background: rgba(20, 20, 20, 0.8);
+    width: 150px;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid grey;
+    bottom: 2%;
+    right: 2%;
+}
+
+.legend-color-box {
+    width: 1rem;
+    height: 1rem;
+    position: absolute;
+    margin-top: 7%;
+}
+
 /** modify cesium styles */
 /*************************/
 
