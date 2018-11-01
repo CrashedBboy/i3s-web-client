@@ -98,6 +98,7 @@ function retrieveNodesByFrustum() {
 
     let localTimestamp = displayTimestamp;
 
+    log('remove all previous entities');
     removeAllEntities();
 
     if (!camerInfoShowed) {
@@ -106,6 +107,7 @@ function retrieveNodesByFrustum() {
     }
 
     // get camera bounding
+    log('compute camera infomation');
     let cameraRectangle = viewer.camera.computeViewRectangle();
     let west = Cesium.Math.toDegrees(cameraRectangle.west);
     let south = Cesium.Math.toDegrees(cameraRectangle.south);
@@ -127,6 +129,7 @@ function retrieveNodesByFrustum() {
 
     let rootNodeUrl = layerUrl + '/nodes/root';
 
+    log('traversing node tree...');
     let retrieve = function(nodeUrl) {
         $.ajax({
             url: nodeUrl,
