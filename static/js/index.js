@@ -14,7 +14,7 @@ $(document).ready(function () {
         timeline: false,
         animation: false,
         selectionIndicator: false,
-        infoBox: true
+        infoBox: false
     });
 
     viewer.camera.percentageChanged = 0.2;
