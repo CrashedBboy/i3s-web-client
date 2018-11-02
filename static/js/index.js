@@ -1,7 +1,8 @@
 let viewer;
 let layerUrl;
 let cameraChangedRegisterd = false;
-let showingEntities = new Array();
+let showingMBS = new Array();
+let showingBuildings = new Array();
 let camerInfoShowed = false;
 let displayTimestamp;
 
@@ -99,7 +100,7 @@ function retrieveNodesByFrustum() {
     let localTimestamp = displayTimestamp;
 
     log('remove all previous entities');
-    removeAllEntities();
+    removeAllMBS();
 
     if (!camerInfoShowed) {
         camerInfoShowed = true;
@@ -217,7 +218,7 @@ function processNode(node) {
 
     let color = getLevelColor(node);
 
-    let entity = viewer.entities.add({
+    let mbs = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(node.mbs[0], node.mbs[1], node.mbs[2]),
         ellipsoid: {
             radii: new Cesium.Cartesian3(node.mbs[3], node.mbs[3], node.mbs[3]),
@@ -225,7 +226,11 @@ function processNode(node) {
         }
     });
 
-    showingEntities.push(entity);
+    showingMBS.push(mbs);
+
+    if (buildingShowed(node)) {
+        return;
+    }
 
     $.ajax({
         url: layerUrl + '/nodes/' + node.id + '/' + node.featureData[0].href,
@@ -323,15 +328,17 @@ function processNode(node) {
             }));
             primitive.id = node.id;
             primitive.level = node.level;
+
+            showingBuildings.push(primitive);
         });
     });
 }
 
-function removeAllEntities() {
-    for (let i = 0; i < showingEntities.length; i++) {
-        viewer.entities.remove(showingEntities[i]);
+function removeAllMBS() {
+    for (let i = 0; i < showingMBS.length; i++) {
+        viewer.entities.remove(showingMBS[i]);
     }
-    showingEntities = new Array();
+    showingMBS = new Array();
 }
 
 function offsetVertices(vertices, xOffset, yOffset, zOffset) {
@@ -348,4 +355,14 @@ function cartesianToTypedArray(cartesianArray, typedArray) {
         typedArray[i * 3 + 1] = cartesianArray[i].y;
         typedArray[i * 3 + 2] = cartesianArray[i].z
     }
+}
+
+function buildingShowed(node) {
+    for (let i = 0; i < showingBuildings.length; i++) {
+        let b = showingBuildings[i];
+        if (b.id == node.id) {
+            return true;
+        }
+    }
+    return false;
 }
