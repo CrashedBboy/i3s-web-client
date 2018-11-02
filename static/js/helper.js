@@ -45,3 +45,15 @@ function getLevelColor(node) {
         return Cesium.Color.fromRandom({alpha : 0.3});
     }
 }
+
+function getDistancePerDegree(latitude, longitude) {
+    let earthRadius = 6371000; // in meters
+
+    let distanceBetweenLatitudes = 2 * Math.PI * earthRadius / 360;
+    let distanceBetweenLongitudes = 2 * Math.PI * Math.cos(latitude/(180/Math.PI)) * earthRadius / 360;
+
+    return {
+        latitude: distanceBetweenLatitudes,
+        longitude: distanceBetweenLongitudes
+    };
+}
