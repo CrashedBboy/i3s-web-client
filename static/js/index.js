@@ -5,7 +5,7 @@ let showingEntities = new Array();
 let camerInfoShowed = false;
 let displayTimestamp;
 
-let DEBUG = false;
+let DEBUG = true;
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -47,7 +47,7 @@ function retrieveI3SLayer() {
         type: "GET",
         dataType: "json"
     })
-        .done(function(layer) {
+        .done(function (layer) {
             console.log(layer);
 
             log('loaded i3s layer infomation - ' + layer.name);
@@ -70,7 +70,7 @@ function retrieveI3SLayer() {
                     pitch: Cesium.Math.toRadians(-85),
                     roll: 0
                 },
-                complete: function() {
+                complete: function () {
                     log('moved camera to layer "' + layer.name + '"');
 
                     // register camera change event
@@ -83,11 +83,11 @@ function retrieveI3SLayer() {
                             }
                         });
                     }
-                    
+
                 }
             });
         })
-        .fail(function(jqXHR, textStatus) {
+        .fail(function (jqXHR, textStatus) {
             log('failed to retrieve i3s layer data, please check url again')
         });
 }
@@ -130,14 +130,13 @@ function retrieveNodesByFrustum() {
     let rootNodeUrl = layerUrl + '/nodes/root';
 
     log('traversing node tree...');
-    let retrieve = function(nodeUrl) {
+    let retrieve = function (nodeUrl) {
         $.ajax({
             url: nodeUrl,
             type: "GET",
             dataType: "json"
         })
             .done(function (node) {
-                console.log('globalTimestamp: ' + displayTimestamp + ', localTimestamp: ' + localTimestamp);
                 if (localTimestamp != displayTimestamp) {
                     console.log('data has been expired, aborted');
                     return;
@@ -153,35 +152,35 @@ function retrieveNodesByFrustum() {
                 let mbsH = node.mbs[2];
                 let mbsR = node.mbs[3];
 
-                let diagonal = Math.sqrt(viewAreaHeight*viewAreaHeight + viewAreaWidth*viewAreaWidth);
+                let diagonal = Math.sqrt(viewAreaHeight * viewAreaHeight + viewAreaWidth * viewAreaWidth);
                 let distance = getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, mbsLon);
 
-                if (distance > (diagonal + mbsR) ) {
+                if (distance > (diagonal + mbsR)) {
                     console.log('node is out of range, break');
                     return;
                 }
-                if (getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, middleLongitude) > (viewAreaHeight*0.5 + mbsR)) {
+                if (getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, middleLongitude) > (viewAreaHeight * 0.5 + mbsR)) {
                     console.log('node is out of range, break');
                     return;
                 }
-                if (getDistanceFromLatLon(middleLatitude, middleLongitude, middleLatitude, mbsLon) > (viewAreaWidth*0.5 + mbsR)) {
+                if (getDistanceFromLatLon(middleLatitude, middleLongitude, middleLatitude, mbsLon) > (viewAreaWidth * 0.5 + mbsR)) {
                     console.log('node is out of range, break');
                     return;
                 }
-                
+
                 if (node.lodSelection[0].metricType == "maxScreenThreshold") {
 
                     let goFurther = false;
                     if (node.lodSelection[0].maxError == 0) {
                         goFurther = true;
                     } else {
-                        
+
                         // calcualte maxScreenThreshold and mbs
                         let objScreenSize;
                         let objWidth;
                         let objHeight;
                         if (mbsH != 0 && Math.abs(mbsH) < mbsR) {
-                            objWidth = Math.sqrt(mbsR*mbsR - mbsH*mbsH) * 2;
+                            objWidth = Math.sqrt(mbsR * mbsR - mbsH * mbsH) * 2;
                             objHeight = 0;
                         } else {
                             objWidth = mbsR * 2;
@@ -189,12 +188,12 @@ function retrieveNodesByFrustum() {
                         }
 
                         objScreenSize = viewer.scene.drawingBufferWidth * (objWidth * cameraHeight) / (viewAreaWidth * (cameraHeight - objHeight));
-    
+
                         if (objScreenSize > node.lodSelection[0].maxError && node.children) {
                             goFurther = true;
                         }
                     }
-                
+
                     if (goFurther) {
                         for (let i = 0; i < node.children.length; i++) {
                             retrieve(layerUrl + '/nodes/' + node.children[i].id);
@@ -216,15 +215,116 @@ function retrieveNodesByFrustum() {
 function processNode(node) {
     console.log(node);
 
+    let color = getLevelColor(node);
+
     let entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(node.mbs[0], node.mbs[1], node.mbs[2]),
-        ellipsoid : {
-            radii : new Cesium.Cartesian3(node.mbs[3], node.mbs[3], node.mbs[3]),
-            material : getLevelColor(node)
+        ellipsoid: {
+            radii: new Cesium.Cartesian3(node.mbs[3], node.mbs[3], node.mbs[3]),
+            material: color
         }
     });
 
     showingEntities.push(entity);
+
+    $.ajax({
+        url: layerUrl + '/nodes/' + node.id + '/' + node.featureData[0].href,
+        type: 'GET',
+        dataType: 'json'
+    }).done(function (featureData) {
+
+        $.ajax({
+            url: layerUrl + '/nodes/' + node.id + '/' + node.geometryData[0].href,
+            xhrFields: {
+                responseType: "arraybuffer"
+            },
+            processData: false
+        }).done(function (geometryBuffer) {
+            console.log(featureData);
+            console.log(geometryBuffer);
+
+            let features = featureData.featureData;
+            let geometryData = featureData.geometryData[0];
+            let vertexAttributes = geometryData.params.vertexAttributes;
+            let instances = new Array();
+
+            let vertexPerFeature = 3;
+            if (geometryData.params.type == 'triangles') {
+                vertexPerFeature = 3;
+            } else if (geometryData.params.type == 'lines') {
+                vertexPerFeature = 2;
+            } else if (geometryData.params.type == 'points') {
+                vertexPerFeature = 1;
+            }
+
+            for (let i = 0; i < features.length; i++) {
+                let feature = features[i];
+                let faceRange = feature.geometries[0].params.faceRange; // faceRange is the index of faces(triangles): [first, last]
+                let featureVertices = new Float32Array(
+                    geometryBuffer,
+                    vertexAttributes.position.byteOffset + faceRange[0] * (vertexPerFeature * vertexAttributes.position.valuesPerElement) * Float32Array.BYTES_PER_ELEMENT, // offset
+                    (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.position.valuesPerElement) // count
+                );
+
+                let minHeight = featureVertices.filter( function(coordinate, index) {
+                    return (index + 1) % 3 == 0;
+                }).reduce( function(accumulator, currentValue) {
+                    return Math.min(accumulator, currentValue);
+                });
+
+                offsetVertices(featureVertices, node.mbs[0], node.mbs[1], -minHeight); // move each vertices to right coordinates
+
+                let cartesianPositions = Cesium.Cartesian3.fromDegreesArrayHeights(featureVertices);
+                let positions = new Float64Array(featureVertices.length);
+                
+                cartesianToTypedArray(cartesianPositions, positions);
+
+                let normals = new Float32Array(
+                    geometryBuffer,
+                    vertexAttributes.normal.byteOffset + faceRange[0] * (vertexPerFeature * vertexAttributes.normal.valuesPerElement) * Float32Array.BYTES_PER_ELEMENT,
+                    (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.normal.valuesPerElement)
+                );
+
+                let geometry = new Cesium.Geometry({
+                    attributes: {
+                        position: new Cesium.GeometryAttribute({
+                            componentDatatype: Cesium.ComponentDatatype.DOUBLE,
+                            componentsPerAttribute: 3,
+                            values: positions
+                        }),
+                        normal: new Cesium.GeometryAttribute({
+                            componentDatatype: Cesium.ComponentDatatype.FLOAT,
+                            componentsPerAttribute: 3,
+                            values: normals
+                        })
+                    },
+                    primitiveType: Cesium.PrimitiveType.TRIANGLES,
+                    boundingSphere: Cesium.BoundingSphere.fromVertices(positions)
+                });
+
+                var instance = new Cesium.GeometryInstance({
+                    geometry: geometry,
+                    attributes: {
+                        color: Cesium.ColorGeometryInstanceAttribute.fromColor(color)
+                    },
+                    show: new Cesium.ShowGeometryInstanceAttribute(true),
+                    id: feature.id
+                });
+
+                instances.push(instance);
+            }
+
+            var primitive = viewer.scene.primitives.add(new Cesium.Primitive({
+                geometryInstances: instances,
+                appearance: new Cesium.PerInstanceColorAppearance({
+                    closed: true,
+                    translucent: false
+                })
+            }));
+            primitive.id = node.id;
+            primitive.level = node.level;
+        });
+    });
 }
 
 function removeAllEntities() {
@@ -232,4 +332,20 @@ function removeAllEntities() {
         viewer.entities.remove(showingEntities[i]);
     }
     showingEntities = new Array();
+}
+
+function offsetVertices(vertices, xOffset, yOffset, zOffset) {
+    for (let i = 0; i < vertices.length; i += 3) {
+        vertices[i] += xOffset;
+        vertices[i + 1] += yOffset;
+        vertices[i + 2] += zOffset
+    }
+}
+
+function cartesianToTypedArray(cartesianArray, typedArray) {
+    for (let i = 0; i < cartesianArray.length; i++) {
+        typedArray[i * 3] = cartesianArray[i].x;
+        typedArray[i * 3 + 1] = cartesianArray[i].y;
+        typedArray[i * 3 + 2] = cartesianArray[i].z
+    }
 }
