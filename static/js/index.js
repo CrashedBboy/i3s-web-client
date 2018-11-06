@@ -179,22 +179,29 @@ function retrieveNodesByFrustum() {
                     } else {
 
                         // calcualte maxScreenThreshold and mbs
-                        let objScreenSize;
-                        let objWidth;
-                        let objHeight;
-                        if (mbsH != 0 && Math.abs(mbsH) < mbsR) {
-                            objWidth = Math.sqrt(mbsR * mbsR - mbsH * mbsH) * 2;
-                            objHeight = 0;
-                        } else {
-                            objWidth = mbsR * 2;
-                            objHeight = mbsH;
+
+                        let cameraHeading = viewer.camera.heading % Math.PI; // in radians
+                        let distanceScale = (1 / Math.cos(cameraHeading));
+
+                        let distancesPerDegree = getDistancePerDegree(mbsLat, mbsLon);
+                        let objWest = mbsLon - (mbsR / distancesPerDegree.longitude);
+                        let objWestPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objWest, mbsLat, mbsH));
+                        if (!objWestPixelLocation) {
+                            objWestPixelLocation = {x: 0, y: 0};
+                        }
+                        let objEast = mbsLon + (mbsR / distancesPerDegree.longitude);
+                        let objEastPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objEast, mbsLat, mbsH));
+                        if (!objEastPixelLocation) {
+                            objEastPixelLocation = {x: 0, y: 0};
                         }
 
-                        objScreenSize = viewer.scene.drawingBufferWidth * (objWidth * cameraHeight) / (viewAreaWidth * (cameraHeight - objHeight));
+                        let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
+                        console.log(pixelDistance);
 
-                        if (objScreenSize > node.lodSelection[0].maxError && node.children) {
+                        if (pixelDistance > node.lodSelection[0].maxError && node.children) {
                             goFurther = true;
                         }
+                        
                     }
 
                     if (goFurther) {
