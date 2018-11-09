@@ -196,7 +196,6 @@ function retrieveNodesByFrustum() {
                         }
 
                         let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
-                        console.log(pixelDistance);
 
                         if (pixelDistance > node.lodSelection[0].maxError && node.children) {
                             goFurther = true;
@@ -239,7 +238,6 @@ function processNode(node) {
         showingMBS.push(mbs);
     }
 
-
     if (SHOW_BUILDING) {
         if (buildingShowed(node)) {
             return;
@@ -262,6 +260,7 @@ function processNode(node) {
                 let features = featureData.featureData;
                 let geometryData = featureData.geometryData[0];
                 let vertexAttributes = geometryData.params.vertexAttributes;
+                let textureUrl = layerUrl + '/nodes/' + node.id + '/' + node.textureData[0].href;
                 let instances = new Array();
     
                 let vertexPerFeature = 3;
@@ -300,7 +299,13 @@ function processNode(node) {
                         vertexAttributes.normal.byteOffset + faceRange[0] * (vertexPerFeature * vertexAttributes.normal.valuesPerElement) * Float32Array.BYTES_PER_ELEMENT,
                         (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.normal.valuesPerElement)
                     );
-    
+
+                    let uv0s = new Float32Array(
+                        geometryBuffer,
+                        vertexAttributes.uv0.byteOffset + faceRange[0] * (vertexPerFeature * vertexAttributes.uv0.valuesPerElement) * Float32Array.BYTES_PER_ELEMENT,
+                        (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.uv0.valuesPerElement)
+                    );
+
                     let geometry = new Cesium.Geometry({
                         attributes: {
                             position: new Cesium.GeometryAttribute({
@@ -312,6 +317,11 @@ function processNode(node) {
                                 componentDatatype: Cesium.ComponentDatatype.FLOAT,
                                 componentsPerAttribute: 3,
                                 values: normals
+                            }),
+                            st: new Cesium.GeometryAttribute({
+                                componentDatatype: Cesium.ComponentDatatype.FLOAT,
+                                componentsPerAttribute: 2,
+                                values: uv0s
                             })
                         },
                         primitiveType: Cesium.PrimitiveType.TRIANGLES,
@@ -320,9 +330,6 @@ function processNode(node) {
     
                     var instance = new Cesium.GeometryInstance({
                         geometry: geometry,
-                        attributes: {
-                            color: Cesium.ColorGeometryInstanceAttribute.fromColor(color)
-                        },
                         show: new Cesium.ShowGeometryInstanceAttribute(true),
                         id: feature.id
                     });
@@ -332,9 +339,17 @@ function processNode(node) {
     
                 var primitive = viewer.scene.primitives.add(new Cesium.Primitive({
                     geometryInstances: instances,
-                    appearance: new Cesium.PerInstanceColorAppearance({
+                    appearance: new Cesium.MaterialAppearance({
+                        translucent: false,
                         closed: true,
-                        translucent: false
+                        material: new Cesium.Material({
+                            fabric: {
+                                type: 'Image',
+                                uniforms: {
+                                    image: textureUrl
+                                }
+                            }
+                        })
                     })
                 }));
                 primitive.id = node.id;
