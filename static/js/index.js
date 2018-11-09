@@ -6,7 +6,7 @@ let showingBuildings = new Array();
 let camerInfoShowed = false;
 let displayTimestamp;
 
-const DEBUG = true;
+const DEBUG = false;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
 
@@ -80,7 +80,7 @@ function retrieveI3SLayer() {
                     if (cameraChangedRegisterd == false) {
                         cameraChangedRegisterd = true;
 
-                        viewer.camera.changed.addEventListener(function (data) {
+                        viewer.camera.moveEnd.addEventListener(function (data) {
                             if (!DEBUG) {
                                 retrieveNodesByFrustum();
                             }
