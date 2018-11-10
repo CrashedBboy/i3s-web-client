@@ -9,6 +9,7 @@ let displayTimestamp;
 const DEBUG = true;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
+const MAX_ERROR = 600;
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -197,7 +198,9 @@ function retrieveNodesByFrustum() {
 
                         let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
 
-                        if (pixelDistance > node.lodSelection[0].maxError && node.children) {
+                        let maxError = node.lodSelection[0].maxError > MAX_ERROR? MAX_ERROR: node.lodSelection[0].maxError;
+
+                        if (pixelDistance > maxError && node.children) {
                             goFurther = true;
                         }
                         
