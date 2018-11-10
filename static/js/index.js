@@ -306,6 +306,11 @@ function processNode(node) {
                         (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.uv0.valuesPerElement)
                     );
 
+                    // flip the v-coordinate (v = 1 - v), the v directions in i3s and cesium are reversed 
+                    for (let j = 0; j < uv0s.length; j+=2) {
+                        uv0s[j+1] = 1 - uv0s[j+1];
+                    }
+
                     let geometry = new Cesium.Geometry({
                         attributes: {
                             position: new Cesium.GeometryAttribute({
