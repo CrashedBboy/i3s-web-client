@@ -1,8 +1,6 @@
 let viewer;
 let layerUrl;
 let cameraChangedRegisterd = false;
-let showingMBS = new Array();
-let showingBuildings = new Array();
 let camerInfoShowed = false;
 let displayTimestamp;
 
@@ -10,6 +8,12 @@ const DEBUG = true;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
 const MAX_ERROR = 600;
+
+let showingMBS = new Array();
+let showingBuildings = new Array();
+let i3sNodeTree = new Array();
+let i3sNodeShowingArray = new Array();
+let i3sNodeStandbyArray = new Array();
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -19,7 +23,8 @@ $(document).ready(function () {
         timeline: false,
         animation: false,
         selectionIndicator: false,
-        infoBox: false
+        infoBox: false,
+        scene3DOnly: true
     });
 
     viewer.camera.percentageChanged = 0.2;
@@ -142,12 +147,10 @@ function retrieveNodesByFrustum() {
         })
             .done(function (node) {
                 if (localTimestamp != displayTimestamp) {
-                    console.log('data has been expired, aborted');
                     return;
                 }
 
                 if (node.error) {
-                    console.log('wrong node url, break');
                     return;
                 }
 
@@ -160,15 +163,12 @@ function retrieveNodesByFrustum() {
                 let distance = getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, mbsLon);
 
                 if (distance > (diagonal + mbsR)) {
-                    console.log('node is out of range, break');
                     return;
                 }
                 if (getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, middleLongitude) > (viewAreaHeight * 0.5 + mbsR)) {
-                    console.log('node is out of range, break');
                     return;
                 }
                 if (getDistanceFromLatLon(middleLatitude, middleLongitude, middleLatitude, mbsLon) > (viewAreaWidth * 0.5 + mbsR)) {
-                    console.log('node is out of range, break');
                     return;
                 }
 
@@ -242,7 +242,7 @@ function processNode(node) {
     }
 
     if (SHOW_BUILDING) {
-        if (buildingShowed(node)) {
+        if (buildingShowed(node)) { // need fix
             return;
         }
     
@@ -336,7 +336,7 @@ function processNode(node) {
                         boundingSphere: Cesium.BoundingSphere.fromVertices(positions)
                     });
     
-                    var instance = new Cesium.GeometryInstance({
+                    let instance = new Cesium.GeometryInstance({
                         geometry: geometry,
                         show: new Cesium.ShowGeometryInstanceAttribute(true),
                         id: feature.id
@@ -345,7 +345,7 @@ function processNode(node) {
                     instances.push(instance);
                 }
     
-                var primitive = viewer.scene.primitives.add(new Cesium.Primitive({
+                var primitive = new Cesium.Primitive({
                     geometryInstances: instances,
                     appearance: new Cesium.MaterialAppearance({
                         translucent: false,
@@ -358,12 +358,18 @@ function processNode(node) {
                                 }
                             }
                         })
-                    })
-                }));
+                    }),
+                    interleave: false,
+                    vertexCacheOptimize: true,
+                    compressVertices: true,
+                    releaseGeometryInstances: true,
+                    allowPicking: false
+                });
                 primitive.id = node.id;
                 primitive.level = node.level;
+                viewer.scene.primitives.add(primitive);
     
-                showingBuildings.push(primitive);
+                showingBuildings.push(primitive); // need fix
             });
         });
     }
@@ -394,10 +400,68 @@ function cartesianToTypedArray(cartesianArray, typedArray) {
 
 function buildingShowed(node) {
     for (let i = 0; i < showingBuildings.length; i++) {
-        let b = showingBuildings[i];
-        if (b.id == node.id) {
+        if (showingBuildings[i].id == node.id) {
             return true;
         }
     }
     return false;
 }
+
+function searchNode(id) {
+    let target = null;
+    let ids = id.split('-');
+
+    let dig = function (node) {
+
+        let keepGoing = false;
+        if (node.id == id) {
+            target = node;
+            return;
+        } else if (node.id == 'root') {
+            keepGoing = true;
+        } else {
+            let partId = ids[0];
+            for (let i = 1; i < node.level - 1; i++) {
+                partId = partId + '-' + ids[i];
+            }
+
+            if (node.id == partId) {
+                keepGoing = true;
+            }
+        }
+
+        if (keepGoing) {
+            for (let i = 0; i < node.children.length; i++) {
+                dig(node.children[i]);
+            }
+        }
+    }
+
+    for (let j = 0; j < i3sNodeTree.length; j++) {
+        dig(i3sNodeTree[j]);
+    }
+
+    return target;
+}
+
+function appendNode(node) {
+    let newNode = {
+        id: node.id,
+        level: node.level,
+        mbs: node.mbs,
+        children: new Array(),
+        processed: false,
+        show: false,
+        momory: false
+    };
+
+    if (node.parentNode == null) {
+        i3sNodeTree.push(newNode);
+    } else {
+        let parentNode = searchNode(node.parentNode.id);
+        parentNode.children.push(newNode);
+    }
+}
+
+
+
