@@ -12,7 +12,6 @@ const MAX_ERROR = 600;
 let showingMBS = new Array();
 let showingBuildings = new Array();
 let i3sNodeTree = new Array();
-let i3sNodeShowingPrimitives = new Array();
 let i3sNodeStandbyPrimitives = new Array();
 
 $(document).ready(function () {
@@ -28,6 +27,7 @@ $(document).ready(function () {
     });
 
     viewer.camera.percentageChanged = 0.2;
+    viewer.scene.primitives.destroyPrimitives = false;
 
     if (DEBUG) {
         $('#get-node').show();
@@ -154,7 +154,7 @@ function retrieveNodesByFrustum() {
                     return;
                 }
 
-                let appendedNode = appendNode(node);
+                let nodeInTree = appendNode(node);
 
                 let mbsLat = node.mbs[1];
                 let mbsLon = node.mbs[0];
@@ -213,7 +213,7 @@ function retrieveNodesByFrustum() {
                             retrieve(layerUrl + '/nodes/' + node.children[i].id);
                         }
                     } else {
-                        processNode(node, appendedNode);
+                        processNode(node, nodeInTree);
                     }
                 }
             })
@@ -243,7 +243,11 @@ function processNode(node, nodeInTree) {
     }
 
     if (SHOW_BUILDING) {
-        if (buildingShowed(node)) { // need fix
+
+        if (nodeInTree.processed) {
+            if (!nodeInTree.show) {
+                reloadNode(nodeInTree);
+            }
             return;
         }
     
@@ -367,7 +371,7 @@ function processNode(node, nodeInTree) {
                     interleave: false,
                     vertexCacheOptimize: true,
                     compressVertices: true,
-                    releaseGeometryInstances: true,
+                    releaseGeometryInstances: false,
                     allowPicking: false
                 });
                 primitive.id = node.id;
@@ -403,16 +407,6 @@ function cartesianToTypedArray(cartesianArray, typedArray) {
         typedArray[i * 3] = cartesianArray[i].x;
         typedArray[i * 3 + 1] = cartesianArray[i].y;
         typedArray[i * 3 + 2] = cartesianArray[i].z
-    }
-}
-
-function buildingShowed(node) {
-    let result = searchNode(node.id);
-
-    if (result && result.show) {
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -458,9 +452,12 @@ function searchNode(id) {
 }
 
 function appendNode(node) {
-    if (searchNode(node.id)) {
-        return;
+
+    let searched = searchNode(node.id);
+    if (searched) {
+        return searched;
     }
+
     let newNode = {
         id: node.id,
         level: node.level,
@@ -484,5 +481,27 @@ function appendNode(node) {
             return i3sNodeTree[i3sNodeTree.length - 1];
         }
         
+    }
+}
+
+function unloadPrimitive(p) {
+    let treeNode = searchNode(p.id);
+
+    if (treeNode) {
+        treeNode.show = false;
+    }
+    i3sNodeStandbyPrimitives.push(p);
+    viewer.scene.primitives.remove(p);
+}
+
+function reloadNode(treeNode) {
+    for (let i = 0; i < i3sNodeStandbyPrimitives.length; i++) {
+        if (i3sNodeStandbyPrimitives[i].id == treeNode.id) {
+            viewer.scene.primitives.add(i3sNodeStandbyPrimitives[i]);
+            i3sNodeStandbyPrimitives.splice(i, 1);
+
+            treeNode.show = true;
+            break;
+        }
     }
 }
