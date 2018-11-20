@@ -27,7 +27,7 @@ $(document).ready(function () {
     });
 
     viewer.camera.percentageChanged = 0.2;
-    viewer.scene.primitives.destroyPrimitives = false;
+    viewer.scene.primitives.destroyPrimitives = true;
 
     if (DEBUG) {
         $('#get-node').show();
@@ -156,64 +156,21 @@ function retrieveNodesByFrustum() {
 
                 let nodeInTree = appendNode(node);
 
-                let mbsLat = node.mbs[1];
-                let mbsLon = node.mbs[0];
-                let mbsH = node.mbs[2];
-                let mbsR = node.mbs[3];
-
-                let diagonal = Math.sqrt(viewAreaHeight * viewAreaHeight + viewAreaWidth * viewAreaWidth);
-                let distance = getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, mbsLon);
-
-                if (distance > (diagonal + mbsR)) {
-                    return;
-                }
-                if (getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, middleLongitude) > (viewAreaHeight * 0.5 + mbsR)) {
-                    return;
-                }
-                if (getDistanceFromLatLon(middleLatitude, middleLongitude, middleLatitude, mbsLon) > (viewAreaWidth * 0.5 + mbsR)) {
-                    return;
-                }
-
                 if (node.lodSelection[0].metricType == "maxScreenThreshold") {
+                    let lodStatus = lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, middleLongitude, node);
 
-                    let goFurther = false;
-                    if (node.lodSelection[0].maxError == 0) {
-                        goFurther = true;
-                    } else {
+                    switch (lodStatus) {
+                        case 'OUT':
 
-                        // calcualte maxScreenThreshold and mbs
-
-                        let cameraHeading = viewer.camera.heading % Math.PI; // in radians
-                        let distanceScale = (1 / Math.cos(cameraHeading));
-
-                        let distancesPerDegree = getDistancePerDegree(mbsLat, mbsLon);
-                        let objWest = mbsLon - (mbsR / distancesPerDegree.longitude);
-                        let objWestPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objWest, mbsLat, mbsH));
-                        if (!objWestPixelLocation) {
-                            objWestPixelLocation = {x: 0, y: 0};
-                        }
-                        let objEast = mbsLon + (mbsR / distancesPerDegree.longitude);
-                        let objEastPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objEast, mbsLat, mbsH));
-                        if (!objEastPixelLocation) {
-                            objEastPixelLocation = {x: 0, y: 0};
-                        }
-
-                        let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
-
-                        let maxError = node.lodSelection[0].maxError > MAX_ERROR? MAX_ERROR: node.lodSelection[0].maxError;
-
-                        if (pixelDistance > maxError && node.children) {
-                            goFurther = true;
-                        }
-                        
-                    }
-
-                    if (goFurther) {
-                        for (let i = 0; i < node.children.length; i++) {
-                            retrieve(layerUrl + '/nodes/' + node.children[i].id);
-                        }
-                    } else {
-                        processNode(node, nodeInTree);
+                            break;
+                        case 'DIG':
+                            for (let i = 0; i < node.children.length; i++) {
+                                retrieve(layerUrl + '/nodes/' + node.children[i].id);
+                            }
+                            break;
+                        case 'DRAW':
+                            processNode(node, nodeInTree);
+                            break;
                     }
                 }
             })
@@ -223,7 +180,95 @@ function retrieveNodesByFrustum() {
             });
     }
 
+    let traverse = function(nodeInTree, unload = false) {
+        if (!nodeInTree.show) {
+            for (let i = 0; i < nodeInTree.children.length; i++) {
+                traverse(nodeInTree.children[i]);
+            }
+        } else {
+            if (unload) {
+                unloadNode(nodeInTree.id);
+                for (let i = 0; i < nodeInTree.children.length; i++) {
+                    traverse(nodeInTree.children[i], true);
+                }
+            } else {
+                let lodStatus = lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, middleLongitude);
+    
+                if (lodStatus == 'OUT') {
+                    unloadNode(nodeInTree.id);
+                    for (let i = 0; i < nodeInTree.children.length; i++) {
+                        traverse(nodeInTree.children[i], true);
+                    }
+                } else if (lodStatus == 'DIG') {
+                    unloadNode(nodeInTree.id);
+                    for (let i = 0; i < nodeInTree.children.length; i++) {
+                        traverse(nodeInTree.children[i], false);
+                    }
+                }
+            }
+            
+        }
+    };
+    if (i3sNodeTree.length) {
+        traverse(i3sNodeTree[0]);
+    }
     retrieve(rootNodeUrl);
+}
+
+function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, middleLongitude, i3sNode) {
+    let mbsLat = nodeInTree.mbs[1];
+    let mbsLon = nodeInTree.mbs[0];
+    let mbsH = nodeInTree.mbs[2];
+    let mbsR = nodeInTree.mbs[3];
+
+    let diagonal = Math.sqrt(viewAreaHeight * viewAreaHeight + viewAreaWidth * viewAreaWidth);
+    let distance = getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, mbsLon);
+
+    if (distance > (diagonal + mbsR)) {
+        return 'OUT';
+    }
+    if (getDistanceFromLatLon(middleLatitude, middleLongitude, mbsLat, middleLongitude) > (viewAreaHeight * 0.5 + mbsR)) {
+        return 'OUT';
+    }
+    if (getDistanceFromLatLon(middleLatitude, middleLongitude, middleLatitude, mbsLon) > (viewAreaWidth * 0.5 + mbsR)) {
+        return 'OUT';
+    }
+
+    if (nodeInTree.lodMaxError == 0) {
+        return 'DIG';
+    } else {
+
+        // calcualte maxScreenThreshold and mbs
+
+        let cameraHeading = viewer.camera.heading % Math.PI; // in radians
+        let distanceScale = (1 / Math.cos(cameraHeading));
+
+        let distancesPerDegree = getDistancePerDegree(mbsLat, mbsLon);
+        let objWest = mbsLon - (mbsR / distancesPerDegree.longitude);
+        let objWestPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objWest, mbsLat, mbsH));
+        if (!objWestPixelLocation) {
+            objWestPixelLocation = {x: 0, y: 0};
+        }
+        let objEast = mbsLon + (mbsR / distancesPerDegree.longitude);
+        let objEastPixelLocation = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, Cesium.Cartesian3.fromDegrees(objEast, mbsLat, mbsH));
+        if (!objEastPixelLocation) {
+            objEastPixelLocation = {x: 0, y: 0};
+        }
+
+        let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
+
+        let maxError = nodeInTree.lodMaxError > MAX_ERROR? MAX_ERROR: nodeInTree.lodMaxError;
+
+        if (pixelDistance > maxError) {
+            if (!i3sNode && nodeInTree.children.length > 0) {
+                return 'DIG';
+            } else if (i3sNode.children) {
+                return 'DIG';
+            }
+        }
+
+        return 'DRAW';
+    }
 }
 
 function processNode(node, nodeInTree) {
@@ -462,6 +507,7 @@ function appendNode(node) {
         id: node.id,
         level: node.level,
         mbs: node.mbs,
+        lodMaxError: node.lodSelection[0].maxError,
         children: [],
         processed: false,
         show: false,
@@ -484,14 +530,20 @@ function appendNode(node) {
     }
 }
 
-function unloadPrimitive(p) {
-    let treeNode = searchNode(p.id);
+function unloadNode(id) {
+    let treeNode = searchNode(id);
 
     if (treeNode) {
         treeNode.show = false;
     }
-    i3sNodeStandbyPrimitives.push(p);
-    viewer.scene.primitives.remove(p);
+
+    for (let i = 0; i < viewer.scene.primitives._primitives.length; i++) {
+        if (viewer.scene.primitives._primitives[i].id == id) {
+            i3sNodeStandbyPrimitives.push(viewer.scene.primitives._primitives[i]);
+            viewer.scene.primitives._primitives.splice(i, 1);
+            break;
+        }
+    }
 }
 
 function reloadNode(treeNode) {
