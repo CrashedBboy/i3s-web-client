@@ -12,8 +12,8 @@ const MAX_ERROR = 600;
 let showingMBS = new Array();
 let showingBuildings = new Array();
 let i3sNodeTree = new Array();
-let i3sNodeShowingArray = new Array();
-let i3sNodeStandbyArray = new Array();
+let i3sNodeShowingPrimitives = new Array();
+let i3sNodeStandbyPrimitives = new Array();
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -154,6 +154,8 @@ function retrieveNodesByFrustum() {
                     return;
                 }
 
+                let appendedNode = appendNode(node);
+
                 let mbsLat = node.mbs[1];
                 let mbsLon = node.mbs[0];
                 let mbsH = node.mbs[2];
@@ -211,7 +213,7 @@ function retrieveNodesByFrustum() {
                             retrieve(layerUrl + '/nodes/' + node.children[i].id);
                         }
                     } else {
-                        processNode(node);
+                        processNode(node, appendedNode);
                     }
                 }
             })
@@ -224,8 +226,7 @@ function retrieveNodesByFrustum() {
     retrieve(rootNodeUrl);
 }
 
-function processNode(node) {
-    console.log(node);
+function processNode(node, nodeInTree) {
 
     let color = getLevelColor(node);
 
@@ -265,6 +266,7 @@ function processNode(node) {
                 let vertexAttributes = geometryData.params.vertexAttributes;
                 let textureUrl = layerUrl + '/nodes/' + node.id + '/' + node.textureData[0].href;
                 let instances = new Array();
+                let memory = 0;
     
                 let vertexPerFeature = 3;
                 if (geometryData.params.type == 'triangles') {
@@ -343,6 +345,9 @@ function processNode(node) {
                     });
     
                     instances.push(instance);
+                    memory += (positions.length*Float64Array.BYTES_PER_ELEMENT 
+                        + normals.length*Float32Array.BYTES_PER_ELEMENT 
+                        + uv0s.length*Float32Array.BYTES_PER_ELEMENT) / 1e6; // in MBs
                 }
     
                 var primitive = new Cesium.Primitive({
@@ -367,9 +372,12 @@ function processNode(node) {
                 });
                 primitive.id = node.id;
                 primitive.level = node.level;
+                primitive.mbs = node.mbs;
                 viewer.scene.primitives.add(primitive);
     
-                showingBuildings.push(primitive); // need fix
+                nodeInTree.processed = true;
+                nodeInTree.show = true;
+                nodeInTree.memory = memory;
             });
         });
     }
@@ -399,12 +407,13 @@ function cartesianToTypedArray(cartesianArray, typedArray) {
 }
 
 function buildingShowed(node) {
-    for (let i = 0; i < showingBuildings.length; i++) {
-        if (showingBuildings[i].id == node.id) {
-            return true;
-        }
+    let result = searchNode(node.id);
+
+    if (result && result.show) {
+        return true;
+    } else {
+        return false;
     }
-    return false;
 }
 
 function searchNode(id) {
@@ -412,6 +421,10 @@ function searchNode(id) {
     let ids = id.split('-');
 
     let dig = function (node) {
+
+        if (target) {
+            return;
+        }
 
         let keepGoing = false;
         if (node.id == id) {
@@ -445,11 +458,14 @@ function searchNode(id) {
 }
 
 function appendNode(node) {
+    if (searchNode(node.id)) {
+        return;
+    }
     let newNode = {
         id: node.id,
         level: node.level,
         mbs: node.mbs,
-        children: new Array(),
+        children: [],
         processed: false,
         show: false,
         momory: false
@@ -457,11 +473,16 @@ function appendNode(node) {
 
     if (node.parentNode == null) {
         i3sNodeTree.push(newNode);
+        return i3sNodeTree[i3sNodeTree.length - 1];
     } else {
         let parentNode = searchNode(node.parentNode.id);
-        parentNode.children.push(newNode);
+        if (parentNode) {
+            parentNode.children.push(newNode);
+            return parentNode.children[parentNode.children.length - 1];
+        } else {
+            i3sNodeTree.push(newNode);
+            return i3sNodeTree[i3sNodeTree.length - 1];
+        }
+        
     }
 }
-
-
-
