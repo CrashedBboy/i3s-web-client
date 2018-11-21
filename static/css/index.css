@@ -95,6 +95,7 @@ body {
     border: 1px solid grey;
     bottom: 2%;
     right: 2%;
+    display: none;
 }
 
 .legend-color-box {

@@ -7,13 +7,14 @@ let displayTimestamp;
 const DEBUG = true;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
-const MAX_ERROR = 600;
+const MAX_ERROR = 700;
+const MAX_MEMORY_USED = 192;
 
 let showingMBS = new Array();
 let showingBuildings = new Array();
 let i3sNodeTree = new Array();
 let i3sNodePrimitiveAttributes = new Array();
-let gpuMemoryUsed = 0;
+let memoryUsed = 0;
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -32,6 +33,10 @@ $(document).ready(function () {
 
     if (DEBUG) {
         $('#get-node').show();
+    }
+
+    if (SHOW_MBS) {
+        $('#legend-container').show();
     }
 });
 
@@ -87,7 +92,7 @@ function retrieveI3SLayer() {
                     if (cameraChangedRegisterd == false) {
                         cameraChangedRegisterd = true;
 
-                        viewer.camera.changed.addEventListener(function (data) {
+                        viewer.camera.moveEnd.addEventListener(function (data) {
                             if (!DEBUG) {
                                 retrieveNodesByFrustum();
                             }
@@ -310,7 +315,9 @@ function processNode(node, nodeInTree) {
                 },
                 processData: false
             }).done(function (geometryBuffer) {
-    
+
+                
+
                 let features = featureData.featureData;
                 let geometryData = featureData.geometryData[0];
                 let vertexAttributes = geometryData.params.vertexAttributes;
@@ -399,43 +406,59 @@ function processNode(node, nodeInTree) {
                         + normals.length*Float32Array.BYTES_PER_ELEMENT 
                         + uv0s.length*Float32Array.BYTES_PER_ELEMENT) / 1e6; // in MBs
                 }
-    
-                var primitive = new Cesium.Primitive({
-                    geometryInstances: instances,
-                    appearance: new Cesium.MaterialAppearance({
-                        translucent: false,
-                        closed: true,
-                        material: new Cesium.Material({
-                            fabric: {
-                                type: 'Image',
-                                uniforms: {
-                                    image: textureUrl
-                                }
-                            }
-                        })
-                    }),
-                    interleave: false,
-                    vertexCacheOptimize: true,
-                    compressVertices: true,
-                    releaseGeometryInstances: false,
-                    allowPicking: false
-                });
-                primitive.id = node.id;
-                primitive.level = node.level;
-                primitive.mbs = node.mbs;
-                viewer.scene.primitives.add(primitive);
 
-                i3sNodePrimitiveAttributes.push({
-                    id: node.id,
-                    level: node.level,
-                    mbs: node.mbs,
-                    geometryInstances: instances,
-                    textureUrl: textureUrl
+                $.ajax({
+                    url: layerUrl + '/nodes/' + node.id + '/' + node.sharedResource.href,
+                    type: 'GET',
+                    dataType: 'json'
+                }).done(function (sharedResource) {
+
+                    memory += (sharedResource.textureDefinitions[Object.keys(sharedResource.textureDefinitions)[0]].images[0].length[0] / 1e6);
+
+                    var primitive = new Cesium.Primitive({
+                        geometryInstances: instances,
+                        appearance: new Cesium.MaterialAppearance({
+                            translucent: false,
+                            closed: true,
+                            material: new Cesium.Material({
+                                fabric: {
+                                    type: 'Image',
+                                    uniforms: {
+                                        image: textureUrl
+                                    }
+                                }
+                            })
+                        }),
+                        interleave: false,
+                        vertexCacheOptimize: true,
+                        compressVertices: true,
+                        releaseGeometryInstances: false,
+                        allowPicking: false
+                    });
+                    primitive.id = node.id;
+                    primitive.level = node.level;
+                    primitive.mbs = node.mbs;
+
+                    getMemoryUsed();
+
+                    nodeInTree.processed = true;
+                    nodeInTree.memory = memory;
+
+                    if (memoryUsed + memory <= MAX_MEMORY_USED) {
+                        viewer.scene.primitives.add(primitive);
+                        nodeInTree.show = true;
+                    } else {
+                        nodeInTree.show = false;
+                    }
+
+                    i3sNodePrimitiveAttributes.push({
+                        id: node.id,
+                        level: node.level,
+                        mbs: node.mbs,
+                        geometryInstances: instances,
+                        textureUrl: textureUrl
+                    });
                 });
-    
-                nodeInTree.processed = true;
-                nodeInTree.show = true;
-                nodeInTree.memory = memory;
             });
         });
     }
@@ -589,8 +612,7 @@ function reloadNode(treeNode) {
     }
 }
 
-function getGPUMemoryUsage() {
-    console.log(new Date().valueOf());
+function getMemoryUsed() {
     let memoryTotal = 0;
     let dig = function(node) {
         if (node.show && node.memory) {
@@ -601,7 +623,6 @@ function getGPUMemoryUsage() {
         }
     }
     dig(i3sNodeTree[0]);
-    gpuMemoryUsed = memoryTotal;
-    console.log(new Date().valueOf());
+    memoryUsed = memoryTotal;
     return memoryTotal;
 }
