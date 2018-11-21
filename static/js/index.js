@@ -13,6 +13,7 @@ let showingMBS = new Array();
 let showingBuildings = new Array();
 let i3sNodeTree = new Array();
 let i3sNodePrimitiveAttributes = new Array();
+let gpuMemoryUsed = 0;
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -586,4 +587,21 @@ function reloadNode(treeNode) {
             break;
         }
     }
+}
+
+function getGPUMemoryUsage() {
+    console.log(new Date().valueOf());
+    let memoryTotal = 0;
+    let dig = function(node) {
+        if (node.show && node.memory) {
+            memoryTotal += node.memory;
+        }
+        for (let i = 0; i < node.children.length; i++) {
+            dig(node.children[i]);
+        }
+    }
+    dig(i3sNodeTree[0]);
+    gpuMemoryUsed = memoryTotal;
+    console.log(new Date().valueOf());
+    return memoryTotal;
 }
