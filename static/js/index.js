@@ -12,7 +12,7 @@ const MAX_ERROR = 600;
 let showingMBS = new Array();
 let showingBuildings = new Array();
 let i3sNodeTree = new Array();
-let i3sNodeStandbyPrimitives = new Array();
+let i3sNodePrimitiveAttributes = new Array();
 
 $(document).ready(function () {
     viewer = new Cesium.Viewer("cesium-container", {
@@ -262,7 +262,7 @@ function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, mid
         if (pixelDistance > maxError) {
             if (!i3sNode && nodeInTree.children.length > 0) {
                 return 'DIG';
-            } else if (i3sNode.children) {
+            } else if (i3sNode && i3sNode.children) {
                 return 'DIG';
             }
         }
@@ -423,6 +423,14 @@ function processNode(node, nodeInTree) {
                 primitive.level = node.level;
                 primitive.mbs = node.mbs;
                 viewer.scene.primitives.add(primitive);
+
+                i3sNodePrimitiveAttributes.push({
+                    id: node.id,
+                    level: node.level,
+                    mbs: node.mbs,
+                    geometryInstances: instances,
+                    textureUrl: textureUrl
+                });
     
                 nodeInTree.processed = true;
                 nodeInTree.show = true;
@@ -539,18 +547,40 @@ function unloadNode(id) {
 
     for (let i = 0; i < viewer.scene.primitives._primitives.length; i++) {
         if (viewer.scene.primitives._primitives[i].id == id) {
-            i3sNodeStandbyPrimitives.push(viewer.scene.primitives._primitives[i]);
-            viewer.scene.primitives._primitives.splice(i, 1);
+            viewer.scene.primitives.remove(viewer.scene.primitives._primitives[i]);
             break;
         }
     }
 }
 
 function reloadNode(treeNode) {
-    for (let i = 0; i < i3sNodeStandbyPrimitives.length; i++) {
-        if (i3sNodeStandbyPrimitives[i].id == treeNode.id) {
-            viewer.scene.primitives.add(i3sNodeStandbyPrimitives[i]);
-            i3sNodeStandbyPrimitives.splice(i, 1);
+    for (let i = 0; i < i3sNodePrimitiveAttributes.length; i++) {
+        if (i3sNodePrimitiveAttributes[i].id == treeNode.id) {
+
+            let primitive = new Cesium.Primitive({
+                geometryInstances: i3sNodePrimitiveAttributes[i].geometryInstances,
+                appearance: new Cesium.MaterialAppearance({
+                    translucent: false,
+                    closed: true,
+                    material: new Cesium.Material({
+                        fabric: {
+                            type: 'Image',
+                            uniforms: {
+                                image: i3sNodePrimitiveAttributes[i].textureUrl
+                            }
+                        }
+                    })
+                }),
+                interleave: false,
+                vertexCacheOptimize: true,
+                compressVertices: true,
+                releaseGeometryInstances: false,
+                allowPicking: false
+            });
+            primitive.id = i3sNodePrimitiveAttributes[i].id;
+            primitive.level = i3sNodePrimitiveAttributes[i].level;
+            primitive.mbs = i3sNodePrimitiveAttributes[i].mbs;
+            viewer.scene.primitives.add(primitive);
 
             treeNode.show = true;
             break;
