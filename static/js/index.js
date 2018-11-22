@@ -113,8 +113,9 @@ function retrieveNodesByFrustum() {
 
     let localTimestamp = displayTimestamp;
 
-    log('remove all previous entities');
-    removeAllMBS();
+    if (SHOW_MBS) {
+        removeAllMBS();
+    }
 
     if (!camerInfoShowed) {
         camerInfoShowed = true;
@@ -167,9 +168,10 @@ function retrieveNodesByFrustum() {
 
                     switch (lodStatus) {
                         case 'OUT':
-
+                            unloadSubTree(nodeInTree);
                             break;
                         case 'DIG':
+                            unloadNodeByObject(nodeInTree);
                             for (let i = 0; i < node.children.length; i++) {
                                 retrieve(layerUrl + '/nodes/' + node.children[i].id);
                             }
@@ -179,49 +181,14 @@ function retrieveNodesByFrustum() {
                             break;
                     }
                 }
-            })
-            .fail(function (jqXHR, textStatus) {
-                console.error(jqXHR);
-                console.error(textStatus);
             });
     }
-
-    let traverse = function(nodeInTree, unload = false) {
-        if (!nodeInTree.show) {
-            for (let i = 0; i < nodeInTree.children.length; i++) {
-                traverse(nodeInTree.children[i]);
-            }
-        } else {
-            if (unload) {
-                unloadNode(nodeInTree.id);
-                for (let i = 0; i < nodeInTree.children.length; i++) {
-                    traverse(nodeInTree.children[i], true);
-                }
-            } else {
-                let lodStatus = lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, middleLongitude);
     
-                if (lodStatus == 'OUT') {
-                    unloadNode(nodeInTree.id);
-                    for (let i = 0; i < nodeInTree.children.length; i++) {
-                        traverse(nodeInTree.children[i], true);
-                    }
-                } else if (lodStatus == 'DIG') {
-                    unloadNode(nodeInTree.id);
-                    for (let i = 0; i < nodeInTree.children.length; i++) {
-                        traverse(nodeInTree.children[i], false);
-                    }
-                }
-            }
-            
-        }
-    };
-    if (i3sNodeTree.length) {
-        traverse(i3sNodeTree[0]);
-    }
     retrieve(rootNodeUrl);
 }
 
 function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, middleLongitude, i3sNode) {
+
     let mbsLat = nodeInTree.mbs[1];
     let mbsLon = nodeInTree.mbs[0];
     let mbsH = nodeInTree.mbs[2];
@@ -271,6 +238,7 @@ function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, mid
             } else if (i3sNode && i3sNode.children) {
                 return 'DIG';
             }
+            return 'DRAW';
         }
 
         return 'DRAW';
@@ -443,6 +411,8 @@ function processNode(node, nodeInTree) {
 
                     nodeInTree.processed = true;
                     nodeInTree.memory = memory;
+                    nodeInTree.geometryInstances = instances;
+                    nodeInTree.textureUrl = textureUrl;
 
                     if (memoryUsed + memory <= MAX_MEMORY_USED) {
                         viewer.scene.primitives.add(primitive);
@@ -450,14 +420,6 @@ function processNode(node, nodeInTree) {
                     } else {
                         nodeInTree.show = false;
                     }
-
-                    i3sNodePrimitiveAttributes.push({
-                        id: node.id,
-                        level: node.level,
-                        mbs: node.mbs,
-                        geometryInstances: instances,
-                        textureUrl: textureUrl
-                    });
                 });
             });
         });
@@ -543,7 +505,7 @@ function appendNode(node) {
         children: [],
         processed: false,
         show: false,
-        momory: false
+        memory: false
     };
 
     if (node.parentNode == null) {
@@ -562,7 +524,7 @@ function appendNode(node) {
     }
 }
 
-function unloadNode(id) {
+function unloadNodeById(id) {
     let treeNode = searchNode(id);
 
     if (treeNode) {
@@ -577,38 +539,57 @@ function unloadNode(id) {
     }
 }
 
-function reloadNode(treeNode) {
-    for (let i = 0; i < i3sNodePrimitiveAttributes.length; i++) {
-        if (i3sNodePrimitiveAttributes[i].id == treeNode.id) {
+function unloadNodeByObject(nodeInTree) {
 
-            let primitive = new Cesium.Primitive({
-                geometryInstances: i3sNodePrimitiveAttributes[i].geometryInstances,
-                appearance: new Cesium.MaterialAppearance({
-                    translucent: false,
-                    closed: true,
-                    material: new Cesium.Material({
-                        fabric: {
-                            type: 'Image',
-                            uniforms: {
-                                image: i3sNodePrimitiveAttributes[i].textureUrl
-                            }
-                        }
-                    })
-                }),
-                interleave: false,
-                vertexCacheOptimize: true,
-                compressVertices: true,
-                releaseGeometryInstances: false,
-                allowPicking: false
-            });
-            primitive.id = i3sNodePrimitiveAttributes[i].id;
-            primitive.level = i3sNodePrimitiveAttributes[i].level;
-            primitive.mbs = i3sNodePrimitiveAttributes[i].mbs;
-            viewer.scene.primitives.add(primitive);
+    if (nodeInTree) {
+        nodeInTree.show = false;
+    }
 
-            treeNode.show = true;
+    for (let i = 0; i < viewer.scene.primitives._primitives.length; i++) {
+        if (viewer.scene.primitives._primitives[i].id == nodeInTree.id) {
+            viewer.scene.primitives.remove(viewer.scene.primitives._primitives[i]);
             break;
         }
+    }
+}
+
+function reloadNode(treeNode) {
+
+    let primitive = new Cesium.Primitive({
+        geometryInstances: treeNode.geometryInstances,
+        appearance: new Cesium.MaterialAppearance({
+            translucent: false,
+            closed: true,
+            material: new Cesium.Material({
+                fabric: {
+                    type: 'Image',
+                    uniforms: {
+                        image: treeNode.textureUrl
+                    }
+                }
+            })
+        }),
+        interleave: false,
+        vertexCacheOptimize: true,
+        compressVertices: true,
+        releaseGeometryInstances: false,
+        allowPicking: false
+    });
+    primitive.id = treeNode.id;
+    primitive.level = treeNode.level;
+    primitive.mbs = treeNode.mbs;
+    viewer.scene.primitives.add(primitive);
+
+    treeNode.show = true;
+}
+
+function unloadSubTree(nodeInTree) {
+    if (nodeInTree.show) {
+        unloadNodeByObject(nodeInTree);
+    }
+
+    for (let i = 0; i < nodeInTree.children.length; i++) {
+        unloadSubTree(nodeInTree.children[i]);
     }
 }
 
