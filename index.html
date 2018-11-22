@@ -31,8 +31,19 @@
                     <div class="section-title">Log</div>
                     <div id="log"></div>
                 </div>
-                <div>
+                <div class="panel-section">
                     <button id="get-node" class="btn btn-info">Manually Get Node</button>
+                    <div class="clear-float"></div>
+                </div>
+                <div class="panel-section">
+                    <div class="section-title">Loaded Nodes Memory</div>
+                    <div class="progress">
+                        <div id="memory-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuemin="0" aria-valuemax="100" style="width: 1%"></div>
+                    </div>
+                    <div id="memory-text-container" class="row">
+                        <div class="col-6">Used: <span id="memory-percent-text">0</span>% (<span id="memory-mb-text">0</span>MB)</div>
+                        <div class="col-6" style="text-align: right;">Maximum: <span id="memory-max-text">190</span>MB</div>
+                    </div>
                 </div>
             </div>
             <div id="cesium-container" class="col-8">

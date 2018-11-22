@@ -25,8 +25,8 @@ body {
 }
 
 #panel-title {
-    font-size: 2rem;
-    margin-bottom: 20px;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
 }
 
 .panel-section {
@@ -103,6 +103,16 @@ body {
     height: 1rem;
     position: absolute;
     margin-top: 7%;
+}
+
+#memory-text-container {
+    font-size: 0.7rem;
+    margin-top: 0.4rem;
+}
+
+.progress {
+    margin-top: 1rem;
+    height: 5px;
 }
 
 /** modify cesium styles */

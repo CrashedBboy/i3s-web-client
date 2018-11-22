@@ -38,6 +38,13 @@ $(document).ready(function () {
     if (SHOW_MBS) {
         $('#legend-container').show();
     }
+
+    $('#memory-max-text').text(MAX_MEMORY_USED);
+    setInterval(function() {
+        if (i3sNodeTree[0]) {
+            getMemoryUsed();
+        }
+    }, 500);
 });
 
 $('#i3s-button').click(retrieveI3SLayer);
@@ -407,8 +414,6 @@ function processNode(node, nodeInTree) {
                     primitive.level = node.level;
                     primitive.mbs = node.mbs;
 
-                    getMemoryUsed();
-
                     nodeInTree.processed = true;
                     nodeInTree.memory = memory;
                     nodeInTree.geometryInstances = instances;
@@ -605,5 +610,13 @@ function getMemoryUsed() {
     }
     dig(i3sNodeTree[0]);
     memoryUsed = memoryTotal;
+
+    let percent = memoryTotal / MAX_MEMORY_USED;
+
+    let colorString = 'rgb(' + 128*percent + ',0,' + 128*(1-percent) + ')';
+
+    $('#memory-mb-text').text(Math.floor(memoryTotal));
+    $('#memory-percent-text').text(Math.floor( percent * 100 ));
+    $('#memory-bar').css('width', percent * 100 + '%').css('background-color', colorString);;
     return memoryTotal;
 }
