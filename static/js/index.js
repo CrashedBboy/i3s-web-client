@@ -613,7 +613,7 @@ function getMemoryUsed() {
 
     let percent = memoryTotal / MAX_MEMORY_USED;
 
-    let colorString = 'rgb(' + 128*percent + ',0,' + 128*(1-percent) + ')';
+    let colorString = 'rgb(' + 192*percent + ',64,' + 192*(1-percent) + ')';
 
     $('#memory-mb-text').text(Math.floor(memoryTotal));
     $('#memory-percent-text').text(Math.floor( percent * 100 ));
