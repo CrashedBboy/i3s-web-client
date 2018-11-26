@@ -24,12 +24,19 @@ $(document).ready(function () {
         timeline: false,
         animation: false,
         selectionIndicator: false,
-        infoBox: false,
+        infoBox: true,
         scene3DOnly: true
     });
 
     viewer.camera.percentageChanged = 0.2;
     viewer.scene.primitives.destroyPrimitives = true;
+
+    viewer.screenSpaceEventHandler.setInputAction(function (movement) {
+        var pickedFeature = viewer.scene.pick(movement.position);
+        if (Cesium.defined(pickedFeature)) {
+            pickNode(pickedFeature.primitive);
+        }
+   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     if (DEBUG) {
         $('#get-node').show();
@@ -124,7 +131,7 @@ function retrieveNodesByFrustum() {
         removeAllMBS();
     }
 
-    if (!camerInfoShowed) {
+    if (!camerInfoShowed && DEBUG) {
         camerInfoShowed = true;
         $('#camera-info-container').show();
     }
@@ -145,10 +152,12 @@ function retrieveNodesByFrustum() {
     // get camera height
     let cameraHeight = viewer.camera.positionCartographic.height;
 
-    $('#camera-bounding-text').text('[' + floor2Digit(west) + ', ' + floor2Digit(south) + ', ' + floor2Digit(east) + ', ' + floor2Digit(north) + ']');
-    $('#area-width-text').text(floor2Digit(viewAreaWidth) + 'm');
-    $('#camera-height-text').text(floor2Digit(cameraHeight) + 'm');
-    $('#screen-size-text').text('[' + viewer.scene.drawingBufferWidth + ', ' + viewer.scene.drawingBufferHeight + ']');
+    if (DEBUG) {
+        $('#camera-bounding-text').text('[' + floor2Digit(west) + ', ' + floor2Digit(south) + ', ' + floor2Digit(east) + ', ' + floor2Digit(north) + ']');
+        $('#area-width-text').text(floor2Digit(viewAreaWidth) + 'm');
+        $('#camera-height-text').text(floor2Digit(cameraHeight) + 'm');
+        $('#screen-size-text').text('[' + viewer.scene.drawingBufferWidth + ', ' + viewer.scene.drawingBufferHeight + ']');
+    }
 
     let rootNodeUrl = layerUrl + '/nodes/root';
 
@@ -291,8 +300,6 @@ function processNode(node, nodeInTree) {
                 processData: false
             }).done(function (geometryBuffer) {
 
-                
-
                 let features = featureData.featureData;
                 let geometryData = featureData.geometryData[0];
                 let vertexAttributes = geometryData.params.vertexAttributes;
@@ -408,7 +415,7 @@ function processNode(node, nodeInTree) {
                         vertexCacheOptimize: true,
                         compressVertices: true,
                         releaseGeometryInstances: false,
-                        allowPicking: false
+                        allowPicking: true
                     });
                     primitive.id = node.id;
                     primitive.level = node.level;
@@ -619,4 +626,18 @@ function getMemoryUsed() {
     $('#memory-percent-text').text(Math.floor( percent * 100 ));
     $('#memory-bar').css('width', percent * 100 + '%').css('background-color', colorString);;
     return memoryTotal;
+}
+
+function pickNode(pickedPrimitive) {
+    let node = searchNode(pickedPrimitive.id);
+    console.log(pickedPrimitive);
+    $('#node-info-id, #node-info-level, #node-info-position, #node-info-size').fadeOut();
+
+    setTimeout(() => {
+        $('#node-info-id').fadeIn().text(pickedPrimitive.id);
+        $('#node-info-level').fadeIn().text(pickedPrimitive.level);
+        $('#node-info-position').fadeIn().text(Math.floor(pickedPrimitive.mbs[1]*100)/100 + ', ' + Math.floor(pickedPrimitive.mbs[0]*100)/100);
+        $('#node-info-size').fadeIn().text(node.memory + 'MB');
+        
+    }, 300);
 }
