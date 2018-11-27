@@ -74,8 +74,8 @@ body {
     border-radius: 4px;
     border: grey 1px solid;
     padding: 0.5rem;
-    top: 1%;
-    right: 2%;
+    top: 2%;
+    left: 2%;
     width: 435px;
     display: none;
 }

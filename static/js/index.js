@@ -4,10 +4,10 @@ let cameraChangedRegisterd = false;
 let camerInfoShowed = false;
 let displayTimestamp;
 
-const DEBUG = true;
+const DEBUG = false;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
-const MAX_ERROR = 700;
+const MIN_ERROR = 1200;
 const MAX_MEMORY_USED = 192;
 
 let showingMBS = new Array();
@@ -93,10 +93,10 @@ function retrieveI3SLayer() {
                 }
             });
             viewer.camera.flyTo({
-                destination: Cesium.Rectangle.fromDegrees(layer.store.extent[0], layer.store.extent[1], layer.store.extent[2], layer.store.extent[3]),
+                destination: Cesium.Cartesian3.fromDegrees((layer.store.extent[0]+layer.store.extent[2])/2, (layer.store.extent[1]+layer.store.extent[3])/2, 5000),
                 orientation: {
                     heading: 0,
-                    pitch: Cesium.Math.toRadians(-85),
+                    pitch: Cesium.Math.toRadians(-90),
                     roll: 0
                 },
                 complete: function () {
@@ -194,6 +194,10 @@ function retrieveNodesByFrustum() {
                             break;
                         case 'DRAW':
                             processNode(node, nodeInTree);
+                            for (let i = 0; i < nodeInTree.children.length; i++) {
+                                log('unload child');
+                                unloadSubTree(nodeInTree.children[i]);
+                            }
                             break;
                     }
                 }
@@ -246,7 +250,7 @@ function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, mid
 
         let pixelDistance = Math.abs((objEastPixelLocation.x - objWestPixelLocation.x) * distanceScale);
 
-        let maxError = nodeInTree.lodMaxError > MAX_ERROR? MAX_ERROR: nodeInTree.lodMaxError;
+        let maxError = nodeInTree.lodMaxError < MIN_ERROR? MIN_ERROR: nodeInTree.lodMaxError;
 
         if (pixelDistance > maxError) {
             if (!i3sNode && nodeInTree.children.length > 0) {
@@ -630,14 +634,13 @@ function getMemoryUsed() {
 
 function pickNode(pickedPrimitive) {
     let node = searchNode(pickedPrimitive.id);
-    console.log(pickedPrimitive);
     $('#node-info-id, #node-info-level, #node-info-position, #node-info-size').fadeOut();
 
     setTimeout(() => {
         $('#node-info-id').fadeIn().text(pickedPrimitive.id);
         $('#node-info-level').fadeIn().text(pickedPrimitive.level);
         $('#node-info-position').fadeIn().text(Math.floor(pickedPrimitive.mbs[1]*100)/100 + ', ' + Math.floor(pickedPrimitive.mbs[0]*100)/100);
-        $('#node-info-size').fadeIn().text(node.memory + 'MB');
+        $('#node-info-size').fadeIn().text( (Math.floor(node.memory*1000)/1000) + 'MB');
         
     }, 300);
 }
