@@ -2,6 +2,7 @@ let viewer;
 let layerUrl;
 let cameraChangedRegisterd = false;
 let camerInfoShowed = false;
+let nodeInfoShowed = false;
 let displayTimestamp;
 
 const DEBUG = false;
@@ -195,7 +196,6 @@ function retrieveNodesByFrustum() {
                         case 'DRAW':
                             processNode(node, nodeInTree);
                             for (let i = 0; i < nodeInTree.children.length; i++) {
-                                log('unload child');
                                 unloadSubTree(nodeInTree.children[i]);
                             }
                             break;
@@ -633,6 +633,12 @@ function getMemoryUsed() {
 }
 
 function pickNode(pickedPrimitive) {
+
+    if (!nodeInfoShowed) {
+        $('#node-info-container').fadeIn();
+        nodeInfoShowed = true;
+    }
+
     let node = searchNode(pickedPrimitive.id);
     $('#node-info-id, #node-info-level, #node-info-position, #node-info-size').fadeOut();
 

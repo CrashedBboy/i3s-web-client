@@ -30,7 +30,7 @@ body {
 }
 
 .panel-section {
-    margin-bottom: 10px;
+    margin-bottom: 3rem;
 }
 
 .section-title {
@@ -117,9 +117,26 @@ body {
     height: 5px;
 }
 
+#node-info-container {
+    position: absolute;
+    z-index: 1;
+    background-color: black;
+    width: 240px;
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid grey;
+    right: 2%;
+    top: 2%;
+    display: none;
+}
+
 .node-info-head {
     color: #17a2b8;
     font-weight: 900;
+}
+
+.node-info-value {
+    color: rgb(150, 150, 150);
 }
 
 #node-info-container .row {
