@@ -9,7 +9,7 @@ const DEBUG = false;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
 const MIN_ERROR = 1200;
-const MAX_MEMORY_USED = 192;
+const MAX_MEMORY_USED = 144;
 
 let showingMBS = new Array();
 let showingBuildings = new Array();
@@ -29,7 +29,7 @@ $(document).ready(function () {
         scene3DOnly: true
     });
 
-    viewer.camera.percentageChanged = 0.2;
+    viewer.camera.percentageChanged = 0.5;
     viewer.scene.primitives.destroyPrimitives = true;
 
     viewer.screenSpaceEventHandler.setInputAction(function (movement) {
@@ -94,10 +94,10 @@ function retrieveI3SLayer() {
                 }
             });
             viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees((layer.store.extent[0]+layer.store.extent[2])/2, (layer.store.extent[1]+layer.store.extent[3])/2, 5000),
+                destination: Cesium.Cartesian3.fromDegrees((layer.store.extent[0]+layer.store.extent[2])/2, (layer.store.extent[1]+layer.store.extent[3])/2, 400),
                 orientation: {
-                    heading: 0,
-                    pitch: Cesium.Math.toRadians(-90),
+                    heading: Cesium.Math.toRadians(45),
+                    pitch: Cesium.Math.toRadians(-60),
                     roll: 0
                 },
                 complete: function () {
@@ -188,16 +188,20 @@ function retrieveNodesByFrustum() {
                             unloadSubTree(nodeInTree);
                             break;
                         case 'DIG':
-                            unloadNodeByObject(nodeInTree);
+                            setTimeout(function() {
+                                unloadNodeByObject(nodeInTree);
+                            }, 1000);
                             for (let i = 0; i < node.children.length; i++) {
                                 retrieve(layerUrl + '/nodes/' + node.children[i].id);
                             }
                             break;
                         case 'DRAW':
                             processNode(node, nodeInTree);
-                            for (let i = 0; i < nodeInTree.children.length; i++) {
-                                unloadSubTree(nodeInTree.children[i]);
-                            }
+                            setTimeout(function() {
+                                for (let i = 0; i < nodeInTree.children.length; i++) {
+                                    unloadSubTree(nodeInTree.children[i]);
+                                }
+                            }, 1000);
                             break;
                     }
                 }
