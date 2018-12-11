@@ -143,6 +143,15 @@ body {
     margin-bottom: 0.5rem;
 }
 
+#earthbook-logo {
+    width: 30%;
+    text-align: center;
+    position: absolute;
+    right: 35%;
+    bottom: 3%;
+}
+
+
 /** modify cesium styles */
 /*************************/
 
