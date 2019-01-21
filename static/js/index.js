@@ -5,10 +5,10 @@ let camerInfoShowed = false;
 let nodeInfoShowed = false;
 let displayTimestamp;
 
-const DEBUG = false;
+const DEBUG = true;
 const SHOW_MBS = false;
 const SHOW_BUILDING = true;
-const MIN_ERROR = 1200;
+const MIN_ERROR = 700;
 const MAX_MEMORY_USED = 144;
 
 let showingMBS = new Array();
@@ -18,6 +18,7 @@ let i3sNodePrimitiveAttributes = new Array();
 let memoryUsed = 0;
 
 $(document).ready(function () {
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwNjZlN2NjYS0zZjYwLTQ1NzktOWFiOS0zZDVkNWY4MTliMGYiLCJpZCI6MzMyLCJpYXQiOjE1MjUyMjE5MDV9.Z9xKbte6Y5q0wM58jh81ALeIkHfH_LVUoia3d-H2Oog';
     viewer = new Cesium.Viewer("cesium-container", {
         baseLayerPicker: false,
         fullscreenButton: false,
@@ -81,6 +82,19 @@ function retrieveI3SLayer() {
             console.log(layer);
 
             log('loaded i3s layer infomation - ' + layer.name);
+
+            log('layer boundry [W,S,E,N] is [' + 
+                Math.floor(layer.store.extent[0])+', '+
+                Math.floor(layer.store.extent[1])+', '+
+                Math.floor(layer.store.extent[2])+', '+
+                Math.floor(layer.store.extent[3])+']'
+            );
+
+            if (layer.store.extent[0] < -180 || layer.store.extent[2] > 180 || layer.store.extent[1] < -90 || layer.store.extent[3] > 90
+                || layer.store.extent[0] > layer.store.extent[2] || layer.store.extent[1] > layer.store.extent[3]) {
+                    log('invalid layer boundry value, execution stop.');
+                    return;
+                }
 
             viewer.entities.add({
                 name: "i3s Layer Bounding",
@@ -270,6 +284,7 @@ function lodJudge(nodeInTree, viewAreaHeight, viewAreaWidth, middleLatitude, mid
 }
 
 function processNode(node, nodeInTree) {
+    console.log(node);
 
     let color = getLevelColor(node);
 
@@ -299,7 +314,7 @@ function processNode(node, nodeInTree) {
             type: 'GET',
             dataType: 'json'
         }).done(function (featureData) {
-    
+            console.log(featureData);
             $.ajax({
                 url: layerUrl + '/nodes/' + node.id + '/' + node.geometryData[0].href,
                 xhrFields: {
@@ -308,6 +323,7 @@ function processNode(node, nodeInTree) {
                 processData: false
             }).done(function (geometryBuffer) {
 
+                console.log(geometryBuffer);
                 let features = featureData.featureData;
                 let geometryData = featureData.geometryData[0];
                 let vertexAttributes = geometryData.params.vertexAttributes;
@@ -333,6 +349,11 @@ function processNode(node, nodeInTree) {
                         (faceRange[1] - faceRange[0] + 1) * (vertexPerFeature * vertexAttributes.position.valuesPerElement) // count
                     );
     
+                    if (!featureVertices.length) {
+                        console.log('node.id:' + node.id + ' no featureVertices');
+                        continue;
+                    }
+
                     let minHeight = featureVertices.filter( function(coordinate, index) {
                         return (index + 1) % 3 == 0;
                     }).reduce( function(accumulator, currentValue) {
